@@ -2,17 +2,18 @@
 #include "queue/queue.hpp"
 #include <condition_variable>
 #include <cstdlib>
-#include <deque>
 #include <functional>
 #include <mutex>
+#include <queue>
 
 namespace dispatcher::queue {
 
 class BoundedQueue : public IQueue {
-    std::deque<std::function<void()>> tasks_;
-    const std::size_t capacity_;
+    std::queue<std::function<void()>> tasks_;
+    QueueOptions options_;
     std::mutex mutex_;
     std::condition_variable not_full_;
+    bool shutdown_{};
 
 public:
     explicit BoundedQueue(std::size_t capacity);
@@ -21,7 +22,7 @@ public:
 
     std::optional<std::function<void()>> try_pop() override;
 
-    ~BoundedQueue() override = default;
+    ~BoundedQueue() override;
 
     std::size_t size();
     std::size_t capacity();

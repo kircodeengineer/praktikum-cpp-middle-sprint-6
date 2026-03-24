@@ -5,8 +5,8 @@
 namespace dispatcher::queue {
 
 struct QueueOptions {
-    bool bounded;
-    std::optional<int> capacity;
+    bool bounded{};
+    std::optional<std::size_t> capacity;
 };
 
 class IQueue {
