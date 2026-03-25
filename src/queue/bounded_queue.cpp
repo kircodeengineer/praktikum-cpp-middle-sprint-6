@@ -4,7 +4,7 @@
 namespace dispatcher::queue {
 
 BoundedQueue::BoundedQueue(std::size_t capacity) : options_(true, capacity) {
-    if (*options_.capacity == 0)
+    if (!options_.capacity || *options_.capacity == 0)
         throw std::invalid_argument("Для BoundedQueue необходимо указать ёмкость больше 0");
 }
 
@@ -41,6 +41,11 @@ std::size_t BoundedQueue::size() {
 std::size_t BoundedQueue::capacity() {
     std::unique_lock<std::mutex> lock{mutex_};
     return *options_.capacity;
+}
+
+bool BoundedQueue::empty() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return tasks_.empty();
 }
 
 }  // namespace dispatcher::queue

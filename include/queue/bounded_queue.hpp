@@ -24,8 +24,9 @@ public:
 
     ~BoundedQueue() override;
 
-    std::size_t size();
+    std::size_t size() override;
     std::size_t capacity();
+    bool empty() override;
 };
 
 }  // namespace dispatcher::queue

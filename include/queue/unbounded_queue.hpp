@@ -21,7 +21,9 @@ public:
 
     ~UnboundedQueue() override;
 
-    std::size_t size();
+    std::size_t size() override;
+
+    bool empty() override;
 };
 
 }  // namespace dispatcher::queue

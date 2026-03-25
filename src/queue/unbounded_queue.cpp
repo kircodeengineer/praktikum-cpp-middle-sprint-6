@@ -29,4 +29,9 @@ std::size_t UnboundedQueue::size() {
     return tasks_.size();
 }
 
+bool UnboundedQueue::empty() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return tasks_.empty();
+}
+
 }  // namespace dispatcher::queue
