@@ -202,4 +202,12 @@ TEST_F(PriorityQueueTest, DestructorCallsShutdown) {
         waiter.join();
     }
 }
+
+TEST_F(PriorityQueueTest, PushInvalidPriorityTask) {
+    QueueOptions options{false, std::nullopt};
+    std::map<TaskPriority, QueueOptions> config{{TaskPriority::High, options}};
+    std::unique_ptr<PriorityQueue> temp_queue;
+    temp_queue = std::make_unique<PriorityQueue>(config);
+    EXPECT_THROW(temp_queue->push(TaskPriority::Normal, []() {}), std::invalid_argument);
+}
 }  // namespace dispatcher::queue
