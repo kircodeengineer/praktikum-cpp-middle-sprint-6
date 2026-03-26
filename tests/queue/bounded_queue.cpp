@@ -2,6 +2,7 @@
 #include "gtest/gtest.h"
 #include <chrono>
 #include <cstdint>
+#include <ranges>
 #include <stdexcept>
 #include <thread>
 #include <vector>
@@ -15,7 +16,7 @@ TEST(BoundedQueueTest, ConstructorAndCapacity) {
 
 TEST(BoundedQueueTest, TryPopEmptyQueue) {
     BoundedQueue queue(5);
-    auto result = queue.try_pop();
+    auto result{queue.try_pop()};
     EXPECT_FALSE(result.has_value());
 }
 
@@ -73,9 +74,7 @@ TEST(BoundedQueueTest, PushToFullQueueBlocks) {
     auto popped{queue.try_pop()};
     ASSERT_TRUE(popped.has_value());
     popped.value()();
-
     blocker.join();
-
     EXPECT_TRUE(task_executed);
 }
 
@@ -87,30 +86,31 @@ TEST(BoundedQueueTest, MultiThreadedPushPop) {
     std::vector<std::jthread> threads;
     std::atomic<std::int32_t> total_tasks_executed{0};
 
-    for (std::int32_t i = 0; i < num_threads; ++i) {
-        threads.emplace_back([&queue, &total_tasks_executed, i]() {
-            for (std::int32_t j = 0; j < tasks_per_thread; ++j) {
+    for (auto i : std::views::iota(0, num_threads)) {
+        threads.emplace_back([&queue, &total_tasks_executed, &tasks_per_thread, i]() {
+            for (auto j : std::views::iota(0, tasks_per_thread)) {
                 auto task = [&total_tasks_executed, id = i * 1000 + j]() { ++total_tasks_executed; };
                 queue.push(std::move(task));
             }
         });
     }
 
-    for (int i = 0; i < num_threads; ++i) {
+    for (auto i : std::views::iota(0, num_threads)) {
         threads.emplace_back([&queue, &total_tasks_executed]() {
             while (total_tasks_executed < num_threads * tasks_per_thread) {
                 auto task = queue.try_pop();
-                if (task.has_value())
-                    task.value()();
+                task.and_then([](auto &value) {
+                    value();
+                    return std::optional<std::function<void()>>{};
+                });
 
                 std::this_thread::yield();
             }
         });
     }
 
-    for (auto &t : threads) {
+    for (auto &t : threads)
         t.join();
-    }
 
     EXPECT_EQ(num_threads * tasks_per_thread, total_tasks_executed);
 }
@@ -124,18 +124,16 @@ TEST(BoundedQueueTest, NotificationCorrectness) {
 
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
-    auto popped = queue.try_pop();
+    auto popped{queue.try_pop()};
     ASSERT_TRUE(popped.has_value());
-
     waiting_thread.join();
-
     EXPECT_EQ(1, queue.size());
 }
 
 TEST(BoundedQueueTest, EdgeCapacityValues) {
     BoundedQueue small_queue(1);
     small_queue.push([] {});
-    auto result = small_queue.try_pop();
+    auto result{small_queue.try_pop()};
     ASSERT_TRUE(result.has_value());
 }
 
