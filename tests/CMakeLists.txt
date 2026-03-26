@@ -14,3 +14,4 @@ target_link_libraries(${target}
 add_test(NAME ${target} COMMAND ${target})
 
 add_subdirectory(queue)
+add_subdirectory(thread_pool)
