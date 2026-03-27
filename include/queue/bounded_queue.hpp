@@ -20,7 +20,7 @@ public:
 
     void push(std::function<void()> task) override;
 
-    std::optional<std::function<void()>> try_pop() override;
+    [[nodiscard]] std::optional<std::function<void()>> try_pop() override;
 
     ~BoundedQueue() override;
 

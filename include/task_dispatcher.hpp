@@ -27,7 +27,7 @@ public:
                                  {defaults::HIGH_PRIORITY_QUEUE_BOUNDED, defaults::HIGH_PRIORITY_QUEUE_CAPACITY}},
                                 {TaskPriority::Normal, {defaults::NORMAL_PRIORITY_QUEUE_BOUNDED, std::nullopt}}});
 
-    void Schedule(TaskPriority priority, std::function<void()> task);
+    void schedule(TaskPriority priority, std::function<void()> task);
     ~TaskDispatcher();
 };
 

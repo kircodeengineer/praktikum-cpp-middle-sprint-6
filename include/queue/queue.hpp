@@ -13,9 +13,9 @@ class IQueue {
 public:
     virtual ~IQueue() = default;
     virtual void push(std::function<void()> task) = 0;
-    virtual std::optional<std::function<void()>> try_pop() = 0;
+    [[nodiscard]] virtual std::optional<std::function<void()>> try_pop() = 0;
     virtual bool empty() = 0;
-    virtual std::size_t size() = 0;
+    [[nodiscard]] virtual std::size_t size() = 0;
 };
 
 }  // namespace dispatcher::queue

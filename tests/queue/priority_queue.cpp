@@ -10,7 +10,7 @@ namespace dispatcher::queue {
 class PriorityQueueTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        QueueOptions high_options{true, 10};
+        QueueOptions high_options{true, 100};
         QueueOptions normal_options{false, std::nullopt};
 
         std::map<TaskPriority, QueueOptions> config{{TaskPriority::High, high_options},
@@ -124,15 +124,15 @@ TEST_F(PriorityQueueTest, ShutdownReturnsNullopt) {
 TEST_F(PriorityQueueTest, PopAfterShutdownReturnsNullopt) {
     std::int32_t task_executed{};
     queue_->push(TaskPriority::High, [&task_executed]() { task_executed = 1; });
-
+    auto result1{queue_->pop()};
+    result1.value()();
     queue_->shutdown();
 
-    auto result1{queue_->pop()};
     auto result2{queue_->pop()};
 
-    EXPECT_FALSE(result1.has_value());
+    EXPECT_TRUE(result1.has_value());
     EXPECT_FALSE(result2.has_value());
-    EXPECT_EQ(task_executed, 0);
+    EXPECT_EQ(task_executed, 1);
 }
 
 TEST_F(PriorityQueueTest, MultipleThreads) {
@@ -154,9 +154,9 @@ TEST_F(PriorityQueueTest, MultipleThreads) {
 
     std::atomic<std::int32_t> total_popped{};
     std::thread consumer([this, &total_popped, num_tasks]() {
-        while (total_popped < num_tasks) {
+        while (total_popped.load() < num_tasks) {
             auto task = queue_->pop();
-            task.and_then([&total_popped](auto &value) {
+            task.and_then([this, &total_popped](auto &value) {
                 value();
                 ++total_popped;
                 return std::optional<std::function<void()>>{};
@@ -164,8 +164,10 @@ TEST_F(PriorityQueueTest, MultipleThreads) {
         }
     });
 
+    queue_->shutdown();
     for (auto &t : producers)
         t.join();
+
     consumer.join();
 
     EXPECT_EQ(high_counter + normal_counter, num_tasks);

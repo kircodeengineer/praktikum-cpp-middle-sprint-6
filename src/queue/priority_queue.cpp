@@ -1,5 +1,6 @@
 #include "queue/priority_queue.hpp"
 #include <cstddef>
+#include <print>
 
 namespace dispatcher::queue {
 

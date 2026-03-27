@@ -1,5 +1,5 @@
 #include "task_dispatcher.hpp"
-#include <print>
+
 namespace dispatcher {
 
 TaskDispatcher::TaskDispatcher(std::size_t thread_count,
@@ -7,7 +7,7 @@ TaskDispatcher::TaskDispatcher(std::size_t thread_count,
     : priority_queue_(std::make_shared<dispatcher::queue::PriorityQueue>(priority_to_options)),
       thread_pool_(std::make_unique<dispatcher::thread_pool::ThreadPool>(priority_queue_, thread_count)) {}
 
-void TaskDispatcher::Schedule(TaskPriority priority, std::function<void()> task) {
+void TaskDispatcher::schedule(TaskPriority priority, std::function<void()> task) {
     priority_queue_->push(priority, std::move(task));
 }
 

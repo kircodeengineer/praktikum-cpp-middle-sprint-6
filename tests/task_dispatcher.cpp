@@ -1,7 +1,6 @@
 #include "task_dispatcher.hpp"
 #include <chrono>
 #include <gtest/gtest.h>
-#include <print>
 #include <string>
 #include <thread>
 #include <vector>
@@ -9,11 +8,11 @@
 namespace dispatcher {
 using namespace std::chrono_literals;
 
-TEST(TaskDispatcherTest, ScheduleTask) {
+TEST(TaskDispatcherTest, scheduleTask) {
     TaskDispatcher dispatcher(1);
 
     bool task_executed{};
-    dispatcher.Schedule(TaskPriority::High, [&task_executed]() { task_executed = true; });
+    dispatcher.schedule(TaskPriority::High, [&task_executed]() { task_executed = true; });
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
@@ -34,12 +33,12 @@ TEST_F(TaskDispatcherPriorityTest, SequentialExecutionWithPriority) {
     constexpr int TASK_COUNT{5};
 
     for (auto i : std::views::iota(0, TASK_COUNT)) {
-        dispatcher->Schedule(TaskPriority::Normal, [&execution_order, i]() {
+        dispatcher->schedule(TaskPriority::Normal, [&execution_order, i]() {
             std::this_thread::sleep_for(10ms);
             execution_order.push_back("Normal_" + std::to_string(i));
         });
 
-        dispatcher->Schedule(TaskPriority::High, [&execution_order, i]() {
+        dispatcher->schedule(TaskPriority::High, [&execution_order, i]() {
             std::this_thread::sleep_for(5ms);
             execution_order.push_back("High_" + std::to_string(i));
         });
@@ -64,12 +63,12 @@ TEST_F(TaskDispatcherPriorityTest, SequentialExecutionWithPriority) {
 TEST_F(TaskDispatcherPriorityTest, ImmediateHighPriorityExecution) {
     std::vector<std::string> execution_order;
 
-    dispatcher->Schedule(TaskPriority::Normal, [&execution_order]() {
+    dispatcher->schedule(TaskPriority::Normal, [&execution_order]() {
         std::this_thread::sleep_for(50ms);
         execution_order.push_back("Normal_first");
     });
 
-    dispatcher->Schedule(TaskPriority::High, [&execution_order]() { execution_order.push_back("High_immediate"); });
+    dispatcher->schedule(TaskPriority::High, [&execution_order]() { execution_order.push_back("High_immediate"); });
 
     std::this_thread::sleep_for(100ms);
 
@@ -91,19 +90,19 @@ protected:
 };
 
 TEST_F(TaskDispatcherShutdownTest, AllTasksExecuteBeforeShutdown) {
-    constexpr int TASK_COUNT = 10;
+    constexpr int TASK_COUNT{10};
     std::atomic<int> completed_tasks{0};
     std::mutex cv_mutex;
     std::condition_variable cv;
-    bool all_tasks_completed = false;
+    bool all_tasks_completed{};
 
-    for (int i = 0; i < TASK_COUNT; ++i) {
-        TaskPriority priority = (i % 2 == 0) ? TaskPriority::High : TaskPriority::Normal;
-        auto sleep_ms = (i % 5 + 1) * 20;  // 20–100 мс
+    for (auto i : std::views::iota(0, TASK_COUNT)) {
+        TaskPriority priority{(i % 2 == 0) ? TaskPriority::High : TaskPriority::Normal};
+        auto sleep_ms{(i % 5 + 1) * 20};  // 20–100 мс
 
-        dispatcher->Schedule(priority, [&]() {
+        dispatcher->schedule(priority, [&]() {
             std::this_thread::sleep_for(std::chrono::milliseconds(sleep_ms));
-            int current = completed_tasks.fetch_add(1, std::memory_order_relaxed);
+            auto current{completed_tasks.fetch_add(1, std::memory_order_relaxed)};
             if (current + 1 == TASK_COUNT) {
                 std::lock_guard<std::mutex> lock(cv_mutex);
                 all_tasks_completed = true;
@@ -113,7 +112,7 @@ TEST_F(TaskDispatcherShutdownTest, AllTasksExecuteBeforeShutdown) {
     }
     dispatcher.reset();
 
-    const auto timeout = 10s;
+    const auto timeout{10s};
     std::unique_lock<std::mutex> lock(cv_mutex);
     if (!cv.wait_for(lock, timeout, [&all_tasks_completed] { return all_tasks_completed; })) {
         FAIL() << "Timeout: не все задачи завершились за " << timeout / 1s
@@ -124,13 +123,13 @@ TEST_F(TaskDispatcherShutdownTest, AllTasksExecuteBeforeShutdown) {
 }
 
 TEST_F(TaskDispatcherShutdownTest, ImmediateShutdownWithLongRunningTasks) {
-    std::atomic<int> completed_tasks{0};
-    bool long_task_started = false;
-    bool long_task_finished = false;
+    std::atomic<int> completed_tasks{};
+    bool long_task_started{};
+    bool long_task_finished{};
     std::mutex long_task_mutex;
     std::condition_variable long_task_cv;
 
-    dispatcher->Schedule(TaskPriority::High, [&]() {
+    dispatcher->schedule(TaskPriority::High, [&]() {
         {
             std::lock_guard<std::mutex> lock(long_task_mutex);
             long_task_started = true;
@@ -143,8 +142,8 @@ TEST_F(TaskDispatcherShutdownTest, ImmediateShutdownWithLongRunningTasks) {
         }
     });
 
-    for (int i = 0; i < 3; ++i) {
-        dispatcher->Schedule(TaskPriority::Normal, [&completed_tasks]() {
+    for (auto i : std::views::iota(0, 3)) {
+        dispatcher->schedule(TaskPriority::Normal, [&completed_tasks]() {
             std::this_thread::sleep_for(100ms);
             completed_tasks.fetch_add(1, std::memory_order_relaxed);
         });

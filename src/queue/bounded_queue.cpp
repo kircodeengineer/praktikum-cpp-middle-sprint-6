@@ -4,8 +4,9 @@
 namespace dispatcher::queue {
 
 BoundedQueue::BoundedQueue(std::size_t capacity) : options_(true, capacity) {
-    if (!options_.capacity || *options_.capacity == 0)
+    if (!options_.capacity || *options_.capacity == 0) {
         throw std::invalid_argument("Для BoundedQueue необходимо указать ёмкость больше 0");
+    }
 }
 
 BoundedQueue::~BoundedQueue() {

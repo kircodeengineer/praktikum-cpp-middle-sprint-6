@@ -33,7 +33,6 @@ TEST(BoundedQueueTest, PushAndTryPopSingleTask) {
     EXPECT_EQ(42, value);
 }
 
-// Тест заполнения очереди до ёмкости
 TEST(BoundedQueueTest, FillToCapacity) {
     BoundedQueue queue(2);
     std::int32_t counter{};
