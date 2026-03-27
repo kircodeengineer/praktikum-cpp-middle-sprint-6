@@ -1,7 +1,39 @@
 #include "thread_pool/thread_pool.hpp"
 
+#include <optional>
+#include <thread>
+
 namespace dispatcher::thread_pool {
 
-// здесь ваш код
+ThreadPool::~ThreadPool() {
+    priority_queue_->shutdown();
+    for (auto &thread : threads_) {
+        auto ss{thread.get_stop_source()};
+        ss.request_stop();
+        thread.join();
+    }
+}
 
-} // namespace dispatcher::thread_pool
+ThreadPool::ThreadPool(std::shared_ptr<dispatcher::queue::PriorityQueue> queue, std::size_t num_threads)
+    : priority_queue_(std::move(queue)) {
+    threads_.reserve(num_threads);
+    for (std::size_t i = 0; i < num_threads; ++i)
+        threads_.emplace_back([this](std::stop_token stoken) { Worker(stoken); });
+}
+
+void ThreadPool::Worker(std::stop_token stoken) {
+    while (true) {
+        if (priority_queue_->empty() && stoken.stop_requested())
+            break;
+
+        auto task{priority_queue_->pop()};
+        if (!task.has_value())
+            continue;
+
+        task.value()();
+    }
+}
+
+std::size_t ThreadPool::size() const { return threads_.size(); }
+
+}  // namespace dispatcher::thread_pool
