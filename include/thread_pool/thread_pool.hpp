@@ -13,7 +13,7 @@ private:
     std::shared_ptr<dispatcher::queue::PriorityQueue> priority_queue_;
     std::vector<std::jthread> threads_;
 
-    void worker_routine(std::stop_token stop_token);
+    void Worker(std::stop_token stoken);
 
 public:
     explicit ThreadPool(std::shared_ptr<dispatcher::queue::PriorityQueue> queue, std::size_t num_threads);

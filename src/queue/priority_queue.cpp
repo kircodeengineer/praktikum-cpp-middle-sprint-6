@@ -1,6 +1,5 @@
 #include "queue/priority_queue.hpp"
 #include <cstddef>
-#include <print>
 
 namespace dispatcher::queue {
 
@@ -31,14 +30,15 @@ PriorityQueue::PriorityQueue(const std::map<TaskPriority, QueueOptions> &priorit
 }
 
 void PriorityQueue::push(TaskPriority priority, std::function<void()> task) {
-    auto it{queues_.find(priority)};
-    if (it == queues_.end()) {
-        throw std::invalid_argument("Очереди с указанным приоритетом нет в базе");
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        auto it{queues_.find(priority)};
+        if (it == queues_.end())
+            throw std::invalid_argument("Очереди с указанным приоритетом нет в базе");
+
+        it->second->push(std::move(task));
+        is_empty_.store(false);
     }
-
-    it->second->push(std::move(task));
-
-    std::lock_guard<std::mutex> lock(mutex_);
     cond_var_.notify_one();
 }
 
@@ -46,41 +46,37 @@ std::optional<std::function<void()>> PriorityQueue::pop() {
     while (true) {
         {
             std::unique_lock<std::mutex> lock(mutex_);
-
-            if (shutdown_)
+            if (shutdown_.load() && is_empty_.load())
                 return std::nullopt;
 
             for (const auto &priority : priority_order_) {
-                auto it = queues_.find(priority);
+                auto it{queues_.find(priority)};
                 if (it != queues_.end()) {
-                    auto task = it->second->try_pop();
+                    auto task{it->second->try_pop()};
                     if (task.has_value())
                         return task;
                 }
             }
 
             cond_var_.wait(lock, [this]() {
-                if (shutdown_)
-                    return true;
-
                 for (const auto &priority : priority_order_) {
-                    auto it = queues_.find(priority);
-                    if (it != queues_.end()) {
-                        if (!it->second->empty())
-                            return true;
-                    }
+                    auto it{queues_.find(priority)};
+                    if (it != queues_.end() && !it->second->empty())
+                        return true;
                 }
-                return false;
+                is_empty_.store(true);
+                return shutdown_.load();
             });
         }
     }
 }
 
 void PriorityQueue::shutdown() {
-    shutdown_ = true;
-    std::lock_guard<std::mutex> lock(mutex_);
+    shutdown_.store(true);
     cond_var_.notify_all();
 }
+
+bool PriorityQueue::empty() { return is_empty_.load(); }
 
 PriorityQueue::~PriorityQueue() { shutdown(); }
 

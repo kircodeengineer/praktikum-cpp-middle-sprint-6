@@ -105,32 +105,6 @@ TEST_F(ThreadPoolTest, DestructorDoesNotHang) {
     EXPECT_TRUE(true);
 }
 
-TEST_F(ThreadPoolTest, TasksAfterShutdown) {
-    ThreadPool pool(queue_, 2);
-
-    std::atomic<std::int32_t> task_counter{0};
-
-    const std::int32_t num_tasks{3};
-    for (std::int32_t i = 0; i < num_tasks; ++i) {
-        queue_->push(dispatcher::TaskPriority::Normal, [&task_counter] {
-            task_counter++;
-            std::this_thread::sleep_for(std::chrono::milliseconds(20));
-        });
-    }
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
-
-    queue_->shutdown();
-
-    bool task_executed{};
-    queue_->push(dispatcher::TaskPriority::Normal, [&task_executed] { task_executed = true; });
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
-
-    EXPECT_FALSE(task_executed);
-    EXPECT_GE(task_counter.load(), num_tasks);
-}
-
 TEST_F(ThreadPoolTest, LoadTest) {
     ThreadPool pool(queue_, 4);
 

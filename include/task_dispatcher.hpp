@@ -1,5 +1,6 @@
 #pragma once
 
+#include <map>
 #include <memory>
 
 #include "queue/priority_queue.hpp"
@@ -8,12 +9,25 @@
 
 namespace dispatcher {
 
-class TaskDispatcher {
-    // здесь ваш код
-public:
-    // TaskDispatcher(size_t thread_count, ?);
+namespace defaults {
+inline constexpr std::size_t HIGH_PRIORITY_QUEUE_CAPACITY = 1000;
+inline constexpr bool HIGH_PRIORITY_QUEUE_BOUNDED = true;
+inline constexpr bool NORMAL_PRIORITY_QUEUE_BOUNDED = false;
+}  // namespace defaults
 
-    void schedule(TaskPriority priority, std::function<void()> task);
+class TaskDispatcher {
+private:
+    std::shared_ptr<dispatcher::queue::PriorityQueue> priority_queue_;
+    std::unique_ptr<dispatcher::thread_pool::ThreadPool> thread_pool_;
+
+public:
+    explicit TaskDispatcher(std::size_t thread_count,
+                            const std::map<TaskPriority, dispatcher::queue::QueueOptions> &priority_to_options = {
+                                {TaskPriority::High,
+                                 {defaults::HIGH_PRIORITY_QUEUE_BOUNDED, defaults::HIGH_PRIORITY_QUEUE_CAPACITY}},
+                                {TaskPriority::Normal, {defaults::NORMAL_PRIORITY_QUEUE_BOUNDED, std::nullopt}}});
+
+    void Schedule(TaskPriority priority, std::function<void()> task);
     ~TaskDispatcher();
 };
 
