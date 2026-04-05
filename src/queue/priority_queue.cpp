@@ -38,7 +38,7 @@ void PriorityQueue::push(TaskPriority priority, std::function<void()> task) {
             throw std::invalid_argument("Очереди с указанным приоритетом нет в базе");
 
         it->second->push(std::move(task));
-        is_empty_.store(false);
+        is_empty_ = false;
     }
     cond_var_.notify_one();
 }
@@ -47,7 +47,7 @@ std::optional<std::function<void()>> PriorityQueue::pop() {
     while (true) {
         {
             std::unique_lock<std::mutex> lock(mutex_);
-            if (shutdown_.load() && is_empty_.load())
+            if (shutdown_ && is_empty_)
                 return std::nullopt;
 
             for (const auto &priority : priority_order_) {
@@ -65,19 +65,29 @@ std::optional<std::function<void()>> PriorityQueue::pop() {
                     if (it != queues_.end() && !it->second->empty())
                         return true;
                 }
-                is_empty_.store(true);
-                return shutdown_.load();
+                is_empty_ = true;
+                return shutdown_;
             });
         }
     }
 }
 
 void PriorityQueue::shutdown() {
-    shutdown_.store(true);
+    {
+        std::unique_lock<std::mutex> lock(mutex_);
+        shutdown_ = true;
+    }
     cond_var_.notify_all();
 }
 
-bool PriorityQueue::empty() { return is_empty_.load(); }
+bool PriorityQueue::empty() {
+    bool result{};
+    {
+        std::unique_lock<std::mutex> lock(mutex_);
+        result = is_empty_;
+    }
+    return result;
+}
 
 PriorityQueue::~PriorityQueue() { shutdown(); }
 
