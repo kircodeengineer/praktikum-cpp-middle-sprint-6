@@ -35,7 +35,7 @@ TEST_F(PriorityQueueTest, FailInitNormalPriority) {
 }
 
 TEST_F(PriorityQueueTest, PushAndPopHighPriority) {
-    std::atomic<int> counter{0};
+    std::int32_t counter{0};
 
     queue_->push(TaskPriority::High, [&counter]() { counter += 1; });
 
@@ -43,7 +43,7 @@ TEST_F(PriorityQueueTest, PushAndPopHighPriority) {
     ASSERT_TRUE(task.has_value());
     task.value()();
 
-    EXPECT_EQ(counter.load(), 1);
+    EXPECT_EQ(counter, 1);
 }
 
 TEST_F(PriorityQueueTest, HighPriorityBeforeNormal) {
