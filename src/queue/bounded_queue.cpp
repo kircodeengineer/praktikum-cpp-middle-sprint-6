@@ -30,6 +30,7 @@ std::optional<std::function<void()>> BoundedQueue::try_pop() {
         return std::nullopt;
     auto task{tasks_.front()};
     tasks_.pop();
+    lock.unlock();
     not_full_.notify_one();
     return task;
 }
