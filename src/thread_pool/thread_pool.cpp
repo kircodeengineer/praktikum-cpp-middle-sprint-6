@@ -1,4 +1,5 @@
 #include "thread_pool/thread_pool.hpp"
+#include <logger.hpp>
 
 #include <optional>
 #include <thread>
@@ -26,8 +27,11 @@ void ThreadPool::Worker(std::stop_token stoken) {
         auto task{priority_queue_->pop()};
         if (!task.has_value())
             break;
-
-        task.value()();
+        try {
+            task.value()();
+        } catch (const std::exception &e) {
+            Logger::Get().Log(e.what());
+        }
     }
 }
 
