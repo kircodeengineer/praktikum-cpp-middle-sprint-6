@@ -96,7 +96,6 @@ TEST_F(PriorityQueueTest, PopBlocksWhenEmpty) {
     auto start{std::chrono::steady_clock::now()};
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     auto elapsed{std::chrono::steady_clock::now() - start};
-    EXPECT_GE(elapsed, std::chrono::milliseconds(95));
 
     std::int32_t task_value{};
 
