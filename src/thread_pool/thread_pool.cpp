@@ -23,12 +23,9 @@ ThreadPool::ThreadPool(std::shared_ptr<dispatcher::queue::PriorityQueue> queue, 
 
 void ThreadPool::Worker(std::stop_token stoken) {
     while (true) {
-        if (priority_queue_->empty() && stoken.stop_requested())
-            break;
-
         auto task{priority_queue_->pop()};
         if (!task.has_value())
-            continue;
+            break;
 
         task.value()();
     }
