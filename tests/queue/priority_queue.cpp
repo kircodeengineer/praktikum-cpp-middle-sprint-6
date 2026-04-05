@@ -73,7 +73,7 @@ TEST_F(PriorityQueueTest, PopBlocksWhenEmpty) {
     std::condition_variable cv;
     std::mutex mtx;
 
-    std::thread blocker([this, &popped, &blocker_started, &cv, &mtx]() {
+    std::jthread blocker([this, &popped, &blocker_started, &cv, &mtx]() {
         {
             std::lock_guard<std::mutex> lock(mtx);
             blocker_started = true;
@@ -133,7 +133,7 @@ TEST_F(PriorityQueueTest, MultipleThreads) {
     std::atomic<std::int32_t> high_counter{};
     std::atomic<std::int32_t> normal_counter{};
 
-    std::vector<std::thread> producers;
+    std::vector<std::jthread> producers;
     for (auto i : std::views::iota(0, 5)) {
         producers.emplace_back([this, &high_counter, &normal_counter, i, num_tasks]() {
             for (auto j : std::views::iota(0, num_tasks / 5)) {
@@ -146,7 +146,7 @@ TEST_F(PriorityQueueTest, MultipleThreads) {
     }
 
     std::atomic<std::int32_t> total_popped{};
-    std::thread consumer([this, &total_popped, num_tasks]() {
+    std::jthread consumer([this, &total_popped, num_tasks]() {
         while (total_popped.load() < num_tasks) {
             auto task = queue_->pop();
             task.and_then([this, &total_popped](auto &value) {
@@ -177,7 +177,7 @@ TEST_F(PriorityQueueTest, DestructorCallsShutdown) {
         std::condition_variable cv;
         std::mutex mtx;
 
-        std::thread waiter([&temp_queue, &pop_started, &cv, &mtx]() {
+        std::jthread waiter([&temp_queue, &pop_started, &cv, &mtx]() {
             {
                 std::lock_guard<std::mutex> lock(mtx);
                 pop_started = true;
