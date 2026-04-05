@@ -181,9 +181,8 @@ TEST_F(PriorityQueueTest, DestructorCallsShutdown) {
             {
                 std::lock_guard<std::mutex> lock(mtx);
                 pop_started = true;
-                cv.notify_one();
             }
-
+            cv.notify_one();
             auto result = temp_queue->pop();
             EXPECT_FALSE(result.has_value());
         });
