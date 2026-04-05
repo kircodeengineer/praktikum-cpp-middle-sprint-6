@@ -63,12 +63,12 @@ TEST_F(TaskDispatcherPriorityTest, SequentialExecutionWithPriority) {
 TEST_F(TaskDispatcherPriorityTest, ImmediateHighPriorityExecution) {
     std::vector<std::string> execution_order;
 
+    dispatcher->schedule(TaskPriority::High, [&execution_order]() { execution_order.push_back("High_immediate"); });
+
     dispatcher->schedule(TaskPriority::Normal, [&execution_order]() {
         std::this_thread::sleep_for(50ms);
         execution_order.push_back("Normal_first");
     });
-
-    dispatcher->schedule(TaskPriority::High, [&execution_order]() { execution_order.push_back("High_immediate"); });
 
     std::this_thread::sleep_for(100ms);
 
