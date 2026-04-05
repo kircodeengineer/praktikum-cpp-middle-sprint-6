@@ -47,18 +47,11 @@ TEST_F(PriorityQueueTest, PushAndPopHighPriority) {
 }
 
 TEST_F(PriorityQueueTest, HighPriorityBeforeNormal) {
-    std::int32_t execution_order{};
     std::vector<std::int32_t> order_log;
 
-    queue_->push(TaskPriority::Normal, [&execution_order, &order_log]() {
-        auto current_order{++execution_order};
-        order_log.push_back(current_order);
-    });
+    queue_->push(TaskPriority::Normal, [&order_log]() { order_log.push_back(1); });
 
-    queue_->push(TaskPriority::High, [&execution_order, &order_log]() {
-        auto current_order{++execution_order};
-        order_log.push_back(current_order);
-    });
+    queue_->push(TaskPriority::High, [&order_log]() { order_log.push_back(0); });
 
     auto task1{queue_->pop()};
     auto task2{queue_->pop()};
@@ -70,8 +63,8 @@ TEST_F(PriorityQueueTest, HighPriorityBeforeNormal) {
     task2.value()();
 
     ASSERT_EQ(order_log.size(), 2);
-    EXPECT_EQ(order_log[0], 1);
-    EXPECT_EQ(order_log[1], 2);
+    EXPECT_EQ(order_log[0], 0);
+    EXPECT_EQ(order_log[1], 1);
 }
 
 TEST_F(PriorityQueueTest, PopBlocksWhenEmpty) {
