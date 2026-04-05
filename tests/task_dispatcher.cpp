@@ -33,14 +33,14 @@ TEST_F(TaskDispatcherPriorityTest, SequentialExecutionWithPriority) {
     constexpr int TASK_COUNT{5};
 
     for (auto i : std::views::iota(0, TASK_COUNT)) {
-        dispatcher->schedule(TaskPriority::Normal, [&execution_order, i]() {
-            std::this_thread::sleep_for(10ms);
-            execution_order.push_back("Normal_" + std::to_string(i));
-        });
-
         dispatcher->schedule(TaskPriority::High, [&execution_order, i]() {
             std::this_thread::sleep_for(5ms);
             execution_order.push_back("High_" + std::to_string(i));
+        });
+
+        dispatcher->schedule(TaskPriority::Normal, [&execution_order, i]() {
+            std::this_thread::sleep_for(10ms);
+            execution_order.push_back("Normal_" + std::to_string(i));
         });
     }
 
