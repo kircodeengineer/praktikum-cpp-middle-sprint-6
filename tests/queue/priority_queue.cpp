@@ -35,7 +35,7 @@ TEST_F(PriorityQueueTest, FailInitNormalPriority) {
 }
 
 TEST_F(PriorityQueueTest, PushAndPopHighPriority) {
-    std::atomic<int> counter{0};
+    std::int32_t counter{0};
 
     queue_->push(TaskPriority::High, [&counter]() { counter += 1; });
 
@@ -43,22 +43,15 @@ TEST_F(PriorityQueueTest, PushAndPopHighPriority) {
     ASSERT_TRUE(task.has_value());
     task.value()();
 
-    EXPECT_EQ(counter.load(), 1);
+    EXPECT_EQ(counter, 1);
 }
 
 TEST_F(PriorityQueueTest, HighPriorityBeforeNormal) {
-    std::int32_t execution_order{};
     std::vector<std::int32_t> order_log;
 
-    queue_->push(TaskPriority::Normal, [&execution_order, &order_log]() {
-        auto current_order{++execution_order};
-        order_log.push_back(current_order);
-    });
+    queue_->push(TaskPriority::Normal, [&order_log]() { order_log.push_back(1); });
 
-    queue_->push(TaskPriority::High, [&execution_order, &order_log]() {
-        auto current_order{++execution_order};
-        order_log.push_back(current_order);
-    });
+    queue_->push(TaskPriority::High, [&order_log]() { order_log.push_back(0); });
 
     auto task1{queue_->pop()};
     auto task2{queue_->pop()};
@@ -70,8 +63,8 @@ TEST_F(PriorityQueueTest, HighPriorityBeforeNormal) {
     task2.value()();
 
     ASSERT_EQ(order_log.size(), 2);
-    EXPECT_EQ(order_log[0], 1);
-    EXPECT_EQ(order_log[1], 2);
+    EXPECT_EQ(order_log[0], 0);
+    EXPECT_EQ(order_log[1], 1);
 }
 
 TEST_F(PriorityQueueTest, PopBlocksWhenEmpty) {
@@ -80,7 +73,7 @@ TEST_F(PriorityQueueTest, PopBlocksWhenEmpty) {
     std::condition_variable cv;
     std::mutex mtx;
 
-    std::thread blocker([this, &popped, &blocker_started, &cv, &mtx]() {
+    std::jthread blocker([this, &popped, &blocker_started, &cv, &mtx]() {
         {
             std::lock_guard<std::mutex> lock(mtx);
             blocker_started = true;
@@ -103,7 +96,6 @@ TEST_F(PriorityQueueTest, PopBlocksWhenEmpty) {
     auto start{std::chrono::steady_clock::now()};
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     auto elapsed{std::chrono::steady_clock::now() - start};
-    EXPECT_GE(elapsed, std::chrono::milliseconds(95));
 
     std::int32_t task_value{};
 
@@ -140,7 +132,7 @@ TEST_F(PriorityQueueTest, MultipleThreads) {
     std::atomic<std::int32_t> high_counter{};
     std::atomic<std::int32_t> normal_counter{};
 
-    std::vector<std::thread> producers;
+    std::vector<std::jthread> producers;
     for (auto i : std::views::iota(0, 5)) {
         producers.emplace_back([this, &high_counter, &normal_counter, i, num_tasks]() {
             for (auto j : std::views::iota(0, num_tasks / 5)) {
@@ -153,7 +145,7 @@ TEST_F(PriorityQueueTest, MultipleThreads) {
     }
 
     std::atomic<std::int32_t> total_popped{};
-    std::thread consumer([this, &total_popped, num_tasks]() {
+    std::jthread consumer([this, &total_popped, num_tasks]() {
         while (total_popped.load() < num_tasks) {
             auto task = queue_->pop();
             task.and_then([this, &total_popped](auto &value) {
@@ -184,13 +176,12 @@ TEST_F(PriorityQueueTest, DestructorCallsShutdown) {
         std::condition_variable cv;
         std::mutex mtx;
 
-        std::thread waiter([&temp_queue, &pop_started, &cv, &mtx]() {
+        std::jthread waiter([&temp_queue, &pop_started, &cv, &mtx]() {
             {
                 std::lock_guard<std::mutex> lock(mtx);
                 pop_started = true;
-                cv.notify_one();
             }
-
+            cv.notify_one();
             auto result = temp_queue->pop();
             EXPECT_FALSE(result.has_value());
         });

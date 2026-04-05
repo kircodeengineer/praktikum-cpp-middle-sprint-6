@@ -1,4 +1,5 @@
 #include "thread_pool/thread_pool.hpp"
+#include <logger.hpp>
 
 #include <optional>
 #include <thread>
@@ -23,14 +24,14 @@ ThreadPool::ThreadPool(std::shared_ptr<dispatcher::queue::PriorityQueue> queue, 
 
 void ThreadPool::Worker(std::stop_token stoken) {
     while (true) {
-        if (priority_queue_->empty() && stoken.stop_requested())
-            break;
-
         auto task{priority_queue_->pop()};
         if (!task.has_value())
-            continue;
-
-        task.value()();
+            break;
+        try {
+            task.value()();
+        } catch (const std::exception &e) {
+            Logger::Get().Log(e.what());
+        }
     }
 }
 

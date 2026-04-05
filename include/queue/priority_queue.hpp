@@ -20,8 +20,8 @@ private:
     std::vector<TaskPriority> priority_order_{TaskPriority::High, TaskPriority::Normal};
     std::mutex mutex_;
     std::condition_variable cond_var_;
-    std::atomic<bool> shutdown_{};
-    std::atomic<bool> is_empty_{true};
+    bool shutdown_{};
+    bool is_empty_{true};
 
 public:
     explicit PriorityQueue(const std::map<TaskPriority, QueueOptions> &priority_to_options);
